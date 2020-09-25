@@ -130,19 +130,25 @@ class TestOVS(test_utils.BaseTestCase):
     def test_del_bridge_port(self):
         self.patch_object(ovs.subprocess, 'check_call')
         self.patch_object(ovs, 'log')
-        ovs.del_bridge_port('test', 'eth1')
-        self.check_call.assert_has_calls([
-            mock.call(['ovs-vsctl', '--', '--if-exists', 'del-port',
-                       'test', 'eth1']),
-            mock.call(['ip', 'link', 'set', 'eth1', 'down']),
-            mock.call(['ip', 'link', 'set', 'eth1', 'promisc', 'off'])
-        ])
-        self.assertTrue(self.log.call_count == 1)
-        self.assertTrue(self.check_call.call_count == 3)
-        self.check_call.reset_mock()
-        ovs.del_bridge_port('test', 'eth1', linkdown=False)
+        with mock.patch('netifaces.interfaces', return_value=['eth1']):
+            ovs.del_bridge_port('test', 'eth1')
+            self.check_call.assert_has_calls([
+                mock.call(['ovs-vsctl', '--', '--if-exists', 'del-port', 
+                           'test', 'eth1']),
+                mock.call(['ip', 'link', 'set', 'eth1', 'down']),
+                mock.call(['ip', 'link', 'set', 'eth1', 'promisc', 'off'])
+            ])
+            self.assertTrue(self.log.call_count == 1)
+            self.assertTrue(self.check_call.call_count == 3)
+            self.check_call.reset_mock()
+            ovs.del_bridge_port('test', 'eth1', linkdown=False)
+            self.check_call.assert_called_once_with(
+                ['ovs-vsctl', '--', '--if-exists', 'del-port', 'test', 'eth1'])
+            self.check_call.reset_mock()
+        
+        ovs.del_bridge_port('test', 'fake0')
         self.check_call.assert_called_once_with(
-            ['ovs-vsctl', '--', '--if-exists', 'del-port', 'test', 'eth1'])
+            ['ovs-vsctl', '--', '--if-exists', 'del-port', 'test', 'fake0'])
 
     def test_ovs_appctl(self):
         self.patch_object(ovs.subprocess, 'check_output')

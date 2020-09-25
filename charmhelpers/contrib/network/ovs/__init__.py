@@ -15,6 +15,7 @@
 ''' Helpers for interacting with OpenvSwitch '''
 import collections
 import hashlib
+import netifaces
 import os
 import re
 import six
@@ -265,7 +266,8 @@ def del_bridge_port(name, port, linkdown=True):
     log('Deleting port {} from bridge {}'.format(port, name))
     subprocess.check_call(["ovs-vsctl", "--", "--if-exists", "del-port",
                            name, port])
-    if linkdown:
+    exists = port in netifaces.interfaces()
+    if linkdown and exists:
         subprocess.check_call(["ip", "link", "set", port, "down"])
         subprocess.check_call(["ip", "link", "set", port, "promisc", "off"])
 
